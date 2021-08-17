@@ -1,0 +1,6 @@
+#releated to pmt
+.pmt
+
+#go files mod
+go.sum
+go.mod
