@@ -2,7 +2,9 @@ package models
 
 type UserModel struct {
 	Base
-	Name     string
-	LastName string
-	Avatar   string
+	AuthId   string `json:"auth_id"`
+	UserName string `json:"username"`
+	LastName string `json:"lastname"`
+	Avatar   string `json:"avatar"`
+	IsMember bool   `json:"is_member"`
 }

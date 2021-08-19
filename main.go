@@ -1,8 +1,13 @@
 package main
 
-import "github.com/CavasCallahan/firstGo/server"
+import (
+	"github.com/CavasCallahan/firstGo/server"
+	"github.com/CavasCallahan/firstGo/server/database"
+)
 
 func main() {
-	server := server.NewServer()
-	server.Run()
+	database.StartDB() // Start's the database connection
+
+	server := server.NewServer() //Create's a new server
+	server.Run()                 //Start's the new server
 }

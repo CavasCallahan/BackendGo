@@ -9,14 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var auth_ = models.AuthModel{ //delete me!
-	Base: models.Base{
-		ID: "DUWGF-FHAGY-FUWFA",
-	},
-	Email:    "fire@deadshot.com",
-	Password: "123",
-}
-
 type SingUpUserInfo struct {
 	Email           string `json:"email"`
 	Password        string `json:"password"`
@@ -24,6 +16,7 @@ type SingUpUserInfo struct {
 }
 
 func Login(context *gin.Context) {
+	db := database.GetDataBase()
 	var user_auth models.AuthModel
 
 	if err := context.ShouldBindJSON(&user_auth); err != nil {
@@ -31,12 +24,19 @@ func Login(context *gin.Context) {
 		return
 	}
 
-	if auth_.Email != user_auth.Email || auth_.Password != user_auth.Password {
+	var user *models.AuthModel
+	dbError := db.Where("email = ?", user_auth.Email).First(&user).Error
+
+	if dbError != nil {
+		context.JSON(500, dbError)
+	}
+
+	if user.Email != user_auth.Email || user.Password != services.SHA256Encoder(user_auth.Password) {
 		context.JSON(http.StatusUnauthorized, "Please provid a valid login")
 		return
 	}
 
-	token, err := services.GenerateToken(auth_.ID)
+	token, err := services.GenerateToken(user.ID)
 
 	if err != nil {
 		context.JSON(500, err.Error()) //Gives the error
