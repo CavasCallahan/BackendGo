@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/CavasCallahan/firstGo/server/controller"
+	controller "github.com/CavasCallahan/firstGo/server/controllers"
 	"github.com/gin-gonic/gin"
 )
 
