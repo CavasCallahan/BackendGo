@@ -1,31 +1,37 @@
 package controller
 
 import (
-	"net/http"
-
+	"github.com/CavasCallahan/firstGo/server/database"
 	"github.com/CavasCallahan/firstGo/server/models"
+	"github.com/CavasCallahan/firstGo/server/services"
 	"github.com/gin-gonic/gin"
 )
 
-var auth_ = models.AuthModel{
-	Email:    "fire@deadshot.com",
-	Password: "123",
-}
+func CreateInformation(context *gin.Context) {
+	var user models.UserModel
+	db := database.GetDataBase()
 
-func Login(context *gin.Context) {
-	var user_auth models.AuthModel
-
-	if err := context.ShouldBindJSON(&user_auth); err != nil {
-		context.JSON(http.StatusUnprocessableEntity, "Invalid json provided")
+	if err := context.ShouldBindJSON(&user); err != nil {
+		context.JSON(401, "Invalid json provided")
 		return
 	}
 
-	if auth_.Email != user_auth.Email || auth_.Password != user_auth.Password {
-		context.JSON(http.StatusUnauthorized, "Please provid a valid login")
+	tokenAuth, err := services.ExtractTokenMetaData(context.Request)
+
+	if err != nil {
+		context.JSON(401, "Unauthorized")
 		return
 	}
 
-	context.JSON(200, gin.H{
-		"message": "Hello World!",
-	})
+	user.AuthId = tokenAuth.AuthId
+
+	//Save the user information on the database
+	db_err := db.Create(&user).Error
+
+	if db_err != nil {
+		context.JSON(500, db_err)
+		return
+	}
+
+	context.JSON(200, user)
 }
