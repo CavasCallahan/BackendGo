@@ -30,6 +30,7 @@ func StartDB() {
 	db = database
 
 	migrations.RunMigrations(db)
+	PopulateDatabase()
 
 	config, _ := db.DB()
 

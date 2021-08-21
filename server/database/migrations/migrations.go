@@ -9,7 +9,9 @@ func RunMigrations(db *gorm.DB) {
 	db.Migrator().DropTable(models.AuthModel{})
 	db.Migrator().DropTable(models.UserModel{})
 	db.Migrator().DropTable(models.TokenModel{})
+	db.Migrator().DropTable(models.RolesModel{})
 	db.AutoMigrate(models.AuthModel{})
 	db.AutoMigrate(models.UserModel{})
 	db.AutoMigrate(models.TokenModel{})
+	db.AutoMigrate(models.RolesModel{})
 }
