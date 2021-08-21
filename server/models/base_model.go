@@ -15,7 +15,7 @@ type Base struct {
 
 func (base *Base) BeforeCreate(thx *gorm.DB) (err error) {
 	base.ID = services.GenerateUuidv4()
-	base.CreatedAt = time.Now()
-	base.UpdatedAt = time.Now()
+	base.CreatedAt = time.Now().UTC()
+	base.UpdatedAt = time.Now().UTC()
 	return
 }
