@@ -34,7 +34,36 @@ func RoleSeeder() {
 
 }
 
+func RoleUserSeeder() {
+
+	var role *models.RolesModel
+	dbFindRoleError := db.Where("role_name = ?", "admin").First(&role).Error
+
+	if dbFindRoleError != nil {
+		return
+	}
+
+	var auth *models.AuthModel
+	dbFindAuthError := db.Where("email = ?", "fire@deadshot.king").First(&auth).Error
+
+	if dbFindAuthError != nil {
+		return
+	}
+
+	role_user_model := models.RoleUserModel{
+		AuthId: auth.ID,
+		RoleId: role.ID,
+	}
+
+	dbCreateError := db.Create(&role_user_model).Error
+
+	if dbCreateError != nil {
+		return
+	}
+}
+
 func PopulateDatabase() {
 	AuthSeeder()
 	RoleSeeder()
+	RoleUserSeeder()
 }
