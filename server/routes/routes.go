@@ -26,11 +26,12 @@ func ConfigureRoutes(router *gin.Engine) *gin.Engine {
 		}
 		role := main.Group("role")
 		{
-			role.POST("/", middlewares.AuthMiddleware([]string{"manager", "user"}), controller.CreateRole)       //Handles the creation of the role
-			role.GET("/", middlewares.AuthMiddleware([]string{"admin", "manager", "user"}), controller.GetRoles) //Handles selection of the role
-			role.PUT("/", middlewares.AuthMiddleware([]string{"admin", "manager"}), controller.UpdateRole)       //Handles the update of the role
-			role.DELETE("/", middlewares.AuthMiddleware([]string{"admin", "manager"}), controller.DeleteRole)    //Handles the delete of the role
-			role.POST("/signrole", middlewares.AuthMiddleware([]string{"admin", "manager", "user"}), controller.SignRole)
+			role.POST("/", middlewares.AuthMiddleware([]string{"admin"}), controller.CreateRole)                            //Handles the creation of the role
+			role.GET("/", middlewares.AuthMiddleware([]string{"admin", "manager", "user"}), controller.GetRoles)            //Handles selection of the role
+			role.PUT("/", middlewares.AuthMiddleware([]string{"admin"}), controller.UpdateRole)                             //Handles the update of the role
+			role.DELETE("/", middlewares.AuthMiddleware([]string{"admin"}), controller.DeleteRole)                          //Handles the delete of the role
+			role.POST("/signrole", middlewares.AuthMiddleware([]string{"admin", "manager", "user"}), controller.SignRole)   //Handles the sign to role
+			role.PUT("/signoutrole", middlewares.AuthMiddleware([]string{"admin", "manager", "user"}), controller.SignRole) //Handles the sign to role
 		}
 	}
 

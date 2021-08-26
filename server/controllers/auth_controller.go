@@ -1,13 +1,16 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/CavasCallahan/firstGo/server/database"
 	"github.com/CavasCallahan/firstGo/server/models"
 	"github.com/CavasCallahan/firstGo/server/services"
+	"github.com/CavasCallahan/firstGo/server/validators"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 )
 
 type SingUpUserInfo struct {
@@ -44,7 +47,10 @@ func Login(context *gin.Context) {
 		return
 	}
 
-	context.JSON(201, token.AcessToken)
+	context.JSON(201, gin.H{
+		"acess_token":   token.AcessToken,
+		"refresh_token": token.RefreshToken,
+	})
 }
 
 func SingUp(context *gin.Context) {
@@ -62,6 +68,16 @@ func SingUp(context *gin.Context) {
 		return
 	}
 
+	err := validators.AuthValidation(&models.AuthModel{
+		Email:    sing_up_info.Email,
+		Password: sing_up_info.ConfirmPassword,
+	})
+
+	if len(err) > 0 {
+		context.JSON(400, err)
+		return
+	}
+
 	sing_up_info.Password = services.SHA256Encoder(sing_up_info.Password)
 	sing_up_info.ConfirmPassword = sing_up_info.Password
 
@@ -73,7 +89,7 @@ func SingUp(context *gin.Context) {
 
 	if db_err != nil {
 		context.JSON(500, gin.H{
-			"error": db_err,
+			"error": db_err.Error(),
 		})
 		return
 	}
@@ -93,6 +109,13 @@ func ForgotPassword(context *gin.Context) {
 
 	if err := context.ShouldBindJSON(&reset_info); err != nil {
 		context.JSON(400, "Please provid a valid information")
+		return
+	}
+
+	not_ok := validators.VerifyEmail(reset_info.Email)
+
+	if not_ok {
+		context.JSON(400, "Please provid a valid email")
 		return
 	}
 
@@ -122,6 +145,56 @@ func ForgotPassword(context *gin.Context) {
 	//Send Email with the instruction
 
 	context.JSON(200, token)
+}
+
+func EmailVerification(context *gin.Context) {
+
+	db := database.GetDataBase()
+
+	type EmailVerificationInfo struct {
+		Email string `json:"email"`
+	}
+
+	var email_verification_info *EmailVerificationInfo
+
+	if err := context.ShouldBindJSON(&email_verification_info); err != nil {
+		context.JSON(400, "Please provid valid json")
+		return
+	}
+
+	not_ok := validators.VerifyEmail(email_verification_info.Email)
+
+	if not_ok {
+		context.JSON(400, "Please provid a valid email")
+		return
+	}
+
+	var auth *models.AuthModel
+	dbFindAuthError := db.Where("email = ?", email_verification_info.Email).First(&auth).Error
+
+	if dbFindAuthError != nil {
+		context.JSON(500, dbFindAuthError)
+		return
+	}
+
+	token := services.GenerateStaticToken()
+
+	token_model := models.TokenModel{
+		AuthId: auth.ID,
+		Value:  token,
+		Type:   "validation_email",
+	}
+
+	dbCreateError := db.Create(&token_model).Error
+
+	if dbCreateError != nil {
+		context.JSON(500, dbCreateError)
+		return
+	}
+
+	//send Email
+
+	context.JSON(202, token)
 }
 
 type ValidateCredentials struct {
@@ -198,4 +271,52 @@ func ValidateResetEmail(context *gin.Context) {
 
 	context.JSON(200, "Password changed!")
 
+}
+
+func RefreshToken(context *gin.Context) {
+	mapToken := map[string]string{}
+
+	if err := context.ShouldBindJSON(&mapToken); err != nil {
+		context.JSON(400, err.Error())
+		return
+	}
+
+	refreshToken := mapToken["refresh_token"]
+
+	token, err := jwt.Parse(refreshToken, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte("OnlyAKingCanKilAkingAndOnlyAkingCanBeKilledByAking"), nil
+	})
+
+	if err != nil {
+		context.JSON(400, err)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if ok && token.Valid {
+
+		auth_id, ok := claims["auth_id"].(string)
+
+		if !ok {
+			context.JSON(http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		token, createErr := services.GenerateToken(auth_id)
+
+		if createErr != nil {
+			context.JSON(401, createErr.Error())
+			return
+		}
+
+		context.JSON(201, gin.H{
+			"acess_token":   token.AcessToken,
+			"refresh_token": token.RefreshToken,
+		})
+
+	}
 }

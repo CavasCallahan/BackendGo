@@ -10,11 +10,15 @@ import (
 )
 
 const secretKey = "cebolasLindasOk"
+const secretKeyRefreshToken = "OnlyAKingCanKilAkingAndOnlyAkingCanBeKilledByAking"
 
 type TokenDetails struct {
-	AcessToken string
-	AcessUuid  string
-	AtExpires  int64
+	AcessToken   string
+	RefreshToken string
+	AcessUuid    string
+	RefreshUuid  string
+	AtExpires    int64
+	RtExpires    int64
 }
 
 type AcessDetails struct {
@@ -22,7 +26,9 @@ type AcessDetails struct {
 	AuthId    string
 }
 
-func GenerateToken(auth_id string) (*TokenDetails, error) { //generates the acess_token
+func GenerateToken(auth_id string) (*TokenDetails, error) {
+
+	//Creates the acess_token
 	token_details := &TokenDetails{}
 	token_details.AtExpires = time.Now().Add(time.Minute * 15).Unix()
 	token_details.AcessUuid = "djwudhwudhwu"
@@ -36,6 +42,19 @@ func GenerateToken(auth_id string) (*TokenDetails, error) { //generates the aces
 	atClaims["exp"] = token_details.AtExpires
 	token_unsigned := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
 	token_details.AcessToken, err = token_unsigned.SignedString([]byte(secretKey))
+
+	if err != nil {
+		return nil, err
+	}
+
+	//Creating Refresh Token
+	rtClaims := jwt.MapClaims{}
+	rtClaims["refresh_uuid"] = token_details.RefreshUuid
+	rtClaims["auth_id"] = auth_id
+	rtClaims["exp"] = token_details.RtExpires
+
+	rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
+	token_details.RefreshToken, err = rt.SignedString([]byte(secretKeyRefreshToken))
 
 	if err != nil {
 		return nil, err
