@@ -13,11 +13,27 @@ func VerifyEmail(email string) bool {
 	return !emailRegexp.MatchString(email)
 }
 
-func AuthValidation(auth *models.AuthModel) string {
-	db := database.GetDataBase()
-
+func ValidatePassword(auth models.AuthModel) string {
 	passNumberRegexp := regexp.MustCompile("[0-9]")
 	passUpperRegexp := regexp.MustCompile("[A-Z]")
+
+	if !(len(auth.Password) > 8 && len(auth.Password) < 16) {
+		return "The passoword have to have at least 8 to 16 words or numbers"
+	}
+
+	if !passNumberRegexp.MatchString(auth.Password) {
+		return "The password must have one number number"
+	}
+
+	if !passUpperRegexp.MatchString(auth.Password) {
+		return "The password must have one letter uppercase"
+	}
+
+	return ""
+}
+
+func AuthValidation(auth *models.AuthModel) string {
+	db := database.GetDataBase()
 
 	if len(auth.Email) < 1 {
 		return "Please provid email"
@@ -33,16 +49,10 @@ func AuthValidation(auth *models.AuthModel) string {
 		return "The email is in use"
 	}
 
-	if !(len(auth.Password) > 8 && len(auth.Password) < 16) {
-		return "The passoword have to have at least 8 to 16 words or numbers"
-	}
+	err := ValidatePassword(*auth)
 
-	if !passNumberRegexp.MatchString(auth.Password) {
-		return "The password must have one number number"
-	}
-
-	if !passUpperRegexp.MatchString(auth.Password) {
-		return "The password must have one letter uppercase"
+	if len(err) > 1 {
+		return err
 	}
 
 	return ""
