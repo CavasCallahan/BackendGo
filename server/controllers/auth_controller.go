@@ -94,6 +94,30 @@ func SingUp(context *gin.Context) {
 		return
 	}
 
+	var user_role *models.RolesModel
+	dbFindUserRole := db.Where("role_name = ?", "user").First(&user_role).Error
+
+	if dbFindUserRole != nil {
+		context.JSON(500, gin.H{
+			"error": db_err.Error(),
+		})
+		return
+	}
+
+	role_user := models.RoleUserModel{
+		RoleId: user_role.ID,
+		AuthId: auth.ID,
+	}
+
+	dbCreateUserRole := db.Create(&role_user).Error
+
+	if dbCreateUserRole != nil {
+		context.JSON(500, gin.H{
+			"error": db_err.Error(),
+		})
+		return
+	}
+
 	context.JSON(200, "The user was created!")
 }
 
@@ -181,7 +205,7 @@ func EmailVerification(context *gin.Context) {
 
 	token_model := models.TokenModel{
 		AuthId: auth.ID,
-		Value:  token,
+		Value:  services.SHA256Encoder(token),
 		Type:   "validation_email",
 	}
 
@@ -202,12 +226,21 @@ type ValidateCredentials struct {
 	ComfirmPassoword string `json:"confirm_password"`
 }
 
-func ValidateResetEmail(context *gin.Context) {
+func ValidateResetPassword(context *gin.Context) {
 	var auth *ValidateCredentials
 	db := database.GetDataBase()
 
 	if err := context.ShouldBindJSON(&auth); err != nil { // get's the json information
 		context.JSON(400, "Please provid a valid information")
+		return
+	}
+
+	err := validators.ValidatePassword(models.AuthModel{
+		Password: auth.NewPassword,
+	})
+
+	if len(err) > 0 {
+		context.JSON(400, err)
 		return
 	}
 
@@ -319,4 +352,65 @@ func RefreshToken(context *gin.Context) {
 		})
 
 	}
+}
+
+func ValidateEmail(context *gin.Context) {
+
+	db := database.GetDataBase()
+
+	token, ok := context.GetQuery("token") //get's the token from query
+
+	if !ok {
+		context.JSON(400, "Token not Provided")
+		return
+	}
+
+	var token_model *models.TokenModel
+	dbFindTokenError := db.Where("value = ?", services.SHA256Encoder(token)).First(&token_model).Error
+
+	if dbFindTokenError != nil {
+		context.JSON(500, dbFindTokenError.Error())
+		return
+	}
+
+	if token_model.Type != "validation_email" {
+		context.JSON(404, "Token is not valid")
+		return
+	}
+
+	row_date := time.Now().Minute() - token_model.CreatedAt.Minute()
+
+	if row_date > 15 {
+		context.JSON(400, "Token expired")
+		db.Delete(&token_model)
+		return
+	}
+
+	var auth *models.AuthModel
+
+	dbFindAuthError := db.Where("id = ?", token_model.AuthId).First(&auth).Error
+
+	if dbFindAuthError != nil {
+		context.JSON(500, dbFindAuthError.Error())
+		return
+	}
+
+	auth.IsValid = true
+
+	dbUpdateError := db.Updates(&auth).Error
+
+	if dbUpdateError != nil {
+		context.JSON(500, dbUpdateError.Error())
+		return
+	}
+
+	dbDeleteError := db.Delete(&token_model).Error //deletes the token
+
+	if dbDeleteError != nil {
+		context.JSON(500, dbDeleteError)
+		return
+	}
+
+	context.JSON(200, "Your account is now validated!")
+
 }

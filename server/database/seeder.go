@@ -21,14 +21,23 @@ func AuthSeeder() {
 }
 
 func RoleSeeder() {
+	user_role := models.RolesModel{
+		RoleName: "user",
+	}
 
 	auth_model := models.RolesModel{
 		RoleName: "admin",
 	}
 
-	dbErr := db.Create(&auth_model).Error
+	dbAuthErr := db.Create(&auth_model).Error
 
-	if dbErr != nil {
+	if dbAuthErr != nil {
+		return
+	}
+
+	dbUserRoleError := db.Create(&user_role).Error
+
+	if dbUserRoleError != nil {
 		return
 	}
 

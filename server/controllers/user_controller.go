@@ -6,11 +6,12 @@ import (
 	"github.com/CavasCallahan/firstGo/server/database"
 	"github.com/CavasCallahan/firstGo/server/models"
 	"github.com/CavasCallahan/firstGo/server/services"
+	"github.com/CavasCallahan/firstGo/server/validators"
 	"github.com/gin-gonic/gin"
 )
 
 func CreateInformation(context *gin.Context) {
-	var user *models.UserModel
+	var user models.UserModel
 	db := database.GetDataBase()
 
 	if err := context.ShouldBindJSON(&user); err != nil {
@@ -27,6 +28,13 @@ func CreateInformation(context *gin.Context) {
 
 	user.AuthId = tokenAuth.AuthId
 
+	ValidatorErr := validators.UserValidator(&user)
+
+	if len(ValidatorErr) > 0 {
+		context.JSON(400, ValidatorErr)
+		return
+	}
+
 	//Save the user information on the database
 	db_err := db.Create(&user).Error
 
@@ -35,7 +43,7 @@ func CreateInformation(context *gin.Context) {
 		return
 	}
 
-	context.JSON(200, user)
+	context.JSON(200, "User was created!")
 }
 
 func GetInformation(context *gin.Context) {
@@ -58,7 +66,11 @@ func GetInformation(context *gin.Context) {
 		return
 	}
 
-	context.JSON(200, user)
+	context.JSON(200, gin.H{
+		"user_name": user.UserName,
+		"last_name": user.LastName,
+		"avatar":    user.Avatar,
+	})
 }
 
 func UpdateInformation(context *gin.Context) {
@@ -68,12 +80,20 @@ func UpdateInformation(context *gin.Context) {
 
 	if err := context.ShouldBindJSON(&update_user); err != nil {
 		context.JSON(401, "Invalid json provided")
+		return
 	}
 
 	tokenAuth, err := services.ExtractTokenMetaData(context.Request)
 
 	if err != nil {
 		context.JSON(401, "Unauthorized")
+		return
+	}
+
+	ValidatorErr := validators.UserValidator(&update_user)
+
+	if len(ValidatorErr) > 0 {
+		context.JSON(400, ValidatorErr)
 		return
 	}
 
@@ -94,7 +114,11 @@ func UpdateInformation(context *gin.Context) {
 		return
 	}
 
-	context.JSON(200, user)
+	context.JSON(200, gin.H{
+		"user_name": update_user.UserName,
+		"last_name": update_user.LastName,
+		"avatar":    update_user.Avatar,
+	})
 }
 
 func DeleteInformation(context *gin.Context) {

@@ -15,6 +15,7 @@ func AuthMiddleware(role_names []string) gin.HandlerFunc {
 		tokenAuth, err := services.ExtractTokenMetaData(context.Request)
 
 		if err != nil {
+			context.JSON(401, "Please Provid a valid Token")
 			context.AbortWithStatus(401)
 		}
 		//Find's the role_id
